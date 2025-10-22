@@ -17,6 +17,7 @@ https://github.com/NoseyNick
 * `mkdir -p ~/Code`
 * `cd ~/Code`
 * `git clone https://github.com/chaslinux/cisco-sip.git` # -- this repo
+* Helps to have a standalone switch on eth0 at this point - see below
 * `sudo ~/Code/cisco-sip/Cisco-SIP.sh`
 
 Subsequent instructions will appear on screen:
