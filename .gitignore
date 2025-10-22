@@ -1,0 +1,4 @@
+# Do NOT commit common editor backup files and stuff:
+*~
+.#*
+*.bak
