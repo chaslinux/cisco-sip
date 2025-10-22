@@ -71,6 +71,7 @@ esac; done
 ######################################################################
 BANNER  Installing DHCPd and TFPTd
 
+apt update
 apt install -y udhcpd tftpd-hpa
 
 ######################################################################
