@@ -9,14 +9,26 @@ cat <<__EOF__
 # Computer Recycling @ The Working Centre
 ######################################################################
 __EOF__
+# Consider occasionally:  shellcheck Cisco-SIP.sh
 
+# Initial checks: Are we root?
 case "${USER:-}" in
   root) ROOT_BAD="" ;;
   *)    ROOT_BAD="PLEASE RUN AS ROOT - sudo $0" ;;
 esac
 
+# ... on what OS?
+# shellcheck source=/dev/null # Just don't need the file below when shellchecking
+. /etc/os-release || PRETTY_NAME="UNKNOWN OS!!!"
+case "$PRETTY_NAME" in
+  "Linux Mint 22."*) OS_OK="$PRETTY_NAME - Perfect" ;;
+  "Linux Mint"*)     OS_OK="$PRETTY_NAME - UNTESTED - GOOD LUCK!" ;;
+  *)                 OS_OK="PRETTY_NAME - UNLIKELY TO WORK!!!" ;;
+esac
+
+# What ethernet interface are we likely to use?
 IF=''
-while IFS=' :|' read THIS_IF _IGNORE; do
+while IFS=' :|' read -r THIS_IF _IGNORE; do
   case "$THIS_IF" in
     Inter-|face  ) : ;; # Ignore these column headings...
     lo*   | wl*  ) : ;; # ... and these "dangerous" interfaces
@@ -28,6 +40,7 @@ done < /proc/net/dev
 cat <<__EOF__
 # Do you understand that this will:
 # * Need to run as root - ${ROOT_BAD:-looks good!}
+# * ... on a supported OS: $OS_OK
 # * Run a DHCP and PXE server on ${IF:-WHAT ETHERNET IF=ethNN or whatever???}
 # * ... which may interfere with normal booting or internet access for
 #   machines on that interface!
@@ -41,7 +54,7 @@ BANNER () {
   date +"# %F %T $*"
 }
 DIE () {
-  BANNER "FATAL: $@"
+  BANNER "FATAL: $*"
   exit 9
 }
 
@@ -66,6 +79,7 @@ BANNER  "Configuring $IF ..."
 NEED_ETH="You'll need a switch (or IP Phone) on Ethernet port $IF"
 
 IP4=''  PREFIX=''
+DEVLIST=$(nmcli -t device show "$IF")
 while IFS=:/ read -r KEY VAL VAL2; do
   case "$KEY" in
     IP4.ADDRESS*)  IP4="$VAL"  PREFIX="$VAL2" ;;
@@ -74,7 +88,7 @@ while IFS=:/ read -r KEY VAL VAL2; do
       *) BANNER "WARNING WARNING! $NEED_ETH" ;;
     esac ;;
   esac
-done <<< $(nmcli -t device show "$IF")
+done <<< "$DEVLIST"
 
 if [[ "$IP4" ]]; then
   echo "# Found IP4 addr $IP4 /$PREFIX"
@@ -98,7 +112,7 @@ esac
 ######################################################################
 BANNER  "Configuring DHCP for $IP4 network on $IF ..."
 
-IFS=. read -r A B C D <<<"$IP4"
+IFS=. read -r A B C _D <<<"$IP4"
 
 if ! [[ -f /etc/udhcpd.conf.orig ]]; then
   mv -vf /etc/udhcpd.conf /etc/udhcpd.conf.orig || true # not an error to fail
@@ -219,7 +233,7 @@ __EOF__
 BANNER "Our XMLDefault.cnf.xml ..."
 
 mv -vf XMLDefault.cnf.xml{,~} || true # if it didn't exist
-# FAIRLY minimal XMLDefault.cnf.xml - +++ WIP ++++++++++
+# FAIRLY minimal XMLDefault.cnf.xml - see notes below
 cat > XMLDefault.cnf.xml <<__EOF__
 <Default>
   <autoRegistrationName>WIPED for CR at TWC</autoRegistrationName>
@@ -268,9 +282,9 @@ cat <<__EOF__
 
 ######################################################################
 Will watch logs with:
-  tail -F /var/log/syslog | egrep 'dhcpd|tftpd'
+  tail -F /var/log/syslog | grep -E 'dhcpd|tftpd'
 __EOF__
-  tail -F /var/log/syslog | egrep 'dhcpd|tftpd'
+  tail -F /var/log/syslog | grep -E 'dhcpd|tftpd'
 
 ######################################################################
 # ++++++++++ TODO: More of a "status report" for the download process:
